@@ -106,3 +106,17 @@ func copyFilesWithAllChildren() {
 		}(f, dstInput)
 	}
 }
+
+func filesRename() {
+	srcDir := input.InputString("源路径：")
+	str := input.InputString("匹配字符：")
+	matches, _ := filepath.Glob(filepath.Join(srcDir, str))
+
+	if !input.Confirm() {
+		return
+	}
+	for _, path := range matches {
+		fileName := filepath.Base(path)
+		fmt.Println(fileName)
+	}
+}
