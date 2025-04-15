@@ -138,7 +138,7 @@ func RenameFiles(dir, pattern, target string) error {
 			fmt.Println("-", fileName)
 		}
 	}
-	if !input.Confirm() {
+	if !input.Confirm("确定重命名吗") {
 		return nil
 	}
 	for _, entry := range entries {
