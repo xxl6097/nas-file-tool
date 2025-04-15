@@ -119,7 +119,9 @@ func copyFilesWithAllChildren() {
 // /Users/uuxia/Desktop/work/code/github/golang/nas-file-tool/test
 func filesRename() {
 	srcDir := input.InputString("源路径：")
-	words := input.InputString("通配符匹配：")
-	keywords := input.InputStringEmpty("替换字符：", "")
-	_ = utils.RenameFiles(srcDir, words, keywords)
+	for {
+		words := input.InputString("通配符匹配：")
+		keywords := input.InputStringEmpty("替换字符：", "")
+		_ = utils.RenameFiles(srcDir, words, keywords)
+	}
 }
