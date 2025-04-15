@@ -10,6 +10,28 @@ import (
 	"strings"
 )
 
+func IsVideoFile1(filePath string) bool {
+	ext := filepath.Ext(filePath)
+	ext = strings.ToLower(ext)
+	switch ext {
+	case ".mp4", ".avi", ".mov", ".wmv", ".flv", ".mkv":
+		return true
+	default:
+		return false
+	}
+}
+
+func IsVideoFile(filePath string) bool {
+	ext := filepath.Ext(filePath)
+	ext = strings.ToLower(ext)
+	switch ext {
+	case ".go":
+		return true
+	default:
+		return false
+	}
+}
+
 func CopyFile(src, dst string) error {
 	sourceFile, err := os.Open(src)
 	if err != nil {
