@@ -1,6 +1,6 @@
 #!/bin/bash
 module=$(grep "module" go.mod | cut -d ' ' -f 2)
-options=("windows:amd64" "windows:arm64" "linux:amd64" "linux:arm64" "linux:arm:7" "linux:arm:5" "linux:mips64" "linux:mips64le" "linux:mips:softfloat" "linux:mipsle:softfloat" "linux:riscv64" "linux:loong64" "darwin:amd64" "darwin:arm64" "freebsd:amd64" "android:arm64")
+options=("windows:amd64" "linux:amd64" "linux:arm64" "linux:arm:7" "linux:arm:5" "linux:mips64" "linux:mips64le" "linux:mips:softfloat" "linux:mipsle:softfloat" "linux:riscv64" "linux:loong64" "darwin:amd64" "darwin:arm64" "freebsd:amd64" "android:arm64")
 #options=("linux:amd64" "windows:amd64")
 version=$(git tag -l "v[0-99]*.[0-99]*.[0-99]*" --sort=-creatordate | head -n 1)
 versionDir="$module/pkg"
@@ -159,72 +159,6 @@ function buildAll() {
   #wait
 }
 
-function build() {
-  #echo "---->$1 $2 $3 $4 $5 $6 $7"
-  if [ $7 -eq 1 ]; then
-    buildMenu $1 $2 $3 $4 $5 $6
-  else
-    buildAll $1 $2 $3 $4 $5 $6
-  fi
-}
-
-function upgradeVersion() {
-  version=$(uncrement_version "$version")
-}
-
-function uncrement_version() {
-    local version_part=$1
-    if [ "$version_part" = "" ]; then
-      version_part="v0.0.0"
-    fi
-    local prefix="${version_part%%[0-9.]*}"  # 提取前缀（删除数字/点后的所有内容）
-    local version="${version_part#$prefix}"  # 提取版本号（删除前缀后的剩余部分）
-    # 分割版本号
-    IFS='.' read -ra parts <<< "$version"
-    local major=${parts[0]}
-    local minor=${parts[1]}
-    local patch=${parts[2]}
-    patch=$((patch - 1))
-    if [[ $patch -ge 100 ]]; then
-        minor=$((minor - 1))
-        patch=0
-        # 检查次版本是否需要进位
-        if [[ $minor -ge 100 ]]; then
-            major=$((major - 1))
-            minor=0
-        fi
-    fi
-    # 重组并返回新版本号
-    echo "${prefix}${major}.${minor}.${patch}"
-}
-
-function increment_version() {
-    local version_part=$1
-    if [ "$version_part" = "" ]; then
-      version_part="v0.0.0"
-    fi
-    local prefix="${version_part%%[0-9.]*}"  # 提取前缀（删除数字/点后的所有内容）
-    local version="${version_part#$prefix}"  # 提取版本号（删除前缀后的剩余部分）
-    # 分割版本号
-    IFS='.' read -ra parts <<< "$version"
-    local major=${parts[0]}
-    local minor=${parts[1]}
-    local patch=${parts[2]}
-    patch=$((patch + 1))
-    if [[ $patch -ge 100 ]]; then
-        minor=$((minor + 1))
-        patch=0
-        # 检查次版本是否需要进位
-        if [[ $minor -ge 100 ]]; then
-            major=$((major + 1))
-            minor=0
-        fi
-    fi
-    # 重组并返回新版本号
-    echo "${prefix}${major}.${minor}.${patch}"
-}
-
-
 version::get_version_vars() {
     # shellcheck disable=SC1083
     GIT_COMMIT="$(git rev-parse HEAD^{commit})"
@@ -323,191 +257,6 @@ function buildLdflags() {
   echo "${ldflags[*]-}"
 }
 
-function buildLdflags1() {
-  #os_name=$(uname -s)
-  #echo "os type $os_name"
-  appname=$1
-  DisplayName=$2
-  Description=$3
-  APP_NAME=${appname}
-  #BUILD_VERSION=$(if [ "$(git describe --tags --abbrev=0 2>/dev/null)" != "" ]; then git describe --tags --abbrev=0; else git log --pretty=format:'%h' -n 1; fi)
-  BUILD_TIME=$(TZ=Asia/Shanghai date "+%Y-%m-%d %H:%M:%S")
-  GIT_REVISION=$(git rev-parse --short HEAD)
-  #GIT_BRANCH=$(git name-rev --name-only HEAD)
-  #GIT_BRANCH=$(git tag -l "v[0-99]*.[0-99]*.[0-99]*" --sort=-creatordate | head -n 1)
-  GO_VERSION=$(go version)
-  # shellcheck disable=SC2089
-  local ldflags="-s -w\
- -X '${versionDir}.DisplayName=${DisplayName}_${version}'\
- -X '${versionDir}.Description=${Description}'\
- -X '${versionDir}.AppName=${APP_NAME}'\
- -X '${versionDir}.AppVersion=${version}'\
- -X '${versionDir}.BuildVersion=${version}'\
- -X '${versionDir}.BuildTime=${BUILD_TIME}'\
- -X '${versionDir}.GitRevision=${GIT_REVISION}'\
- -X '${versionDir}.GitBranch=${version}'\
- -X '${versionDir}.GoVersion=${GO_VERSION}'"
-  echo "$ldflags"
-}
-
-
-function push() {
-  git add .
-  git commit -m "$(date '+%Y-%m-%d %H:%M:%S') by ${USER}"
-  echo "提交代码"
-  git push
-}
-
-function quickTagAndPush() {
-  git add .
-  git commit -m "release ${version}"
-  git tag -a $version -m "release ${version}"
-  git push origin $version
-  push
-}
-
-function upload() {
-  builddir=$1
-  appname=$2
-  version=$3
-  ls ${builddir}
-  if [ $? -eq 0 ]; then
-      echo "上传文件 ${builddir} /soft/${appname}/${version}"
-      bash <(curl -s -S -L http://uuxia.cn:8087/up) ${builddir} /soft/${appname}/${version}
-  else
-      echo "上传失败，错误码: $?"  # 输出错误信息（例如返回2表示文件未找到）
-  fi
-}
-
-function gitCommit() {
-  if [ $? -eq 0 ]; then
-      echo "编译成功，git提交代码..."
-      #quickTagAndPush
-      push
-  else
-      echo "编译失败，错误码: $?"  # 输出错误信息（例如返回2表示文件未找到）
-  fi
-}
-
-function buildFrpc() {
-    appname="acfrpc"
-    appdir="./cmd/frpc"
-    DisplayName="AcFrpc网络代理程序"
-    Description="一款基于GO语言的网络代理服务程序"
-    builddir="./release/frpc"
-    rm -rf ${builddir}
-    build $builddir $appname "$version" $appdir $DisplayName $Description "$1"
-    #upload $builddir $appname "$version"
-}
-
-function buildFrps() {
-    appname="acfrps"
-    appdir="./cmd/frps"
-    DisplayName="AcFrps网络代理程序"
-    Description="一款基于GO语言的网络代理服务程序"
-    builddir="./release/frps"
-    rm -rf ${builddir}
-    build $builddir $appname "$version" $appdir $DisplayName $Description "$1"
-    #upload $builddir $appname "$version"
-}
-
-function buildFrpcAndFrpsAll() {
-  rm -rf ${builddir}
-  buildFrpc 2 &
-  buildFrps 2 &
-  wait  # 等待所有后台进程结束
-  builddir="./release"
-  echo "所有任务完成"
-}
-
-function buildFrpcAndFrpsAllForGithubRelease() {
-  echo "===>version:${version}"
-  go get github.com/josephspurrier/goversioninfo/cmd/goversioninfo
-  go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo
-  buildFrpcAndFrpsAll
-  mkdir -p ./release/packages
-  cp -f ./release/frpc/* ./release/packages
-  cp -f ./release/frps/* ./release/packages
-  cp -f ./github_proxy.json ./release/packages
-}
-
-function buildFrpcMenu() {
-  clear
-  echo "1、Frpc编译菜单"
-  echo "2、编译全部"
-  read -p "请选择：" index
-  buildFrpc $index
-}
-
-function buildFrpsMenu() {
-  clear
-  echo "1、Frps编译菜单"
-  echo "2、编译全部"
-  read -p "请选择：" index
-  buildFrps $index
-}
-
-function github_release() {
-    REPO="xxl6097/go-frp-panel"  # 替换为你的GitHub仓库
-    TAG="${version}"  # 替换为你的标签
-    RELEASE_NAME="${version}"  # 替换为你的发布名称
-    DESCRIPTION="基于GO语言的网络代理服务程序"  # 替换为你的发布描述
-    TOKEN=$(cat .token)  # 替换为你的GitHub Token
-    # 定义要扫描的目录
-    DIRECTORY="./release"
-    # 初始化一个空数组
-    FILES=()
-    # 使用find命令扫描目录，并将结果添加到数组中
-    while IFS= read -r file; do
-        FILES+=("$file")
-    done < <(find "$DIRECTORY" -type f)
-    # 打印数组内容
-#    echo "Found files:"
-#    printf '%s\n' "${FILES[@]}"
-
-    # 创建一个新的release
-    response=$(curl -s -X POST \
-      -H "Authorization: token $TOKEN" \
-      -H "Accept: application/vnd.github.v3+json" \
-      https://api.github.com/repos/$REPO/releases \
-      -d "{
-        \"tag_name\": \"$TAG\",
-        \"target_commitish\": \"main\",
-        \"name\": \"$RELEASE_NAME\",
-        \"body\": \"$DESCRIPTION\",
-        \"draft\": false,
-        \"prerelease\": false
-      }")
-
-    # 提取release的上传URL
-    upload_url=$(echo "$response" | jq -r .upload_url | sed -e "s/{?name,label}//")
-
-    # 检查创建release是否成功
-    if [ "$upload_url" == "null" ]; then
-      echo "Failed to create release"
-      echo "$response"
-      exit 1
-    fi
-
-    # 上传附件文件
-    for FILE_PATH in "${FILES[@]}"; do
-      FILE_NAME=$(basename "$FILE_PATH")
-      echo "Uploading $FILE_NAME..."
-      curl -s -X POST \
-        -H "Authorization: token $TOKEN" \
-        -H "Content-Type: $(file -b --mime-type "$FILE_PATH")" \
-        --data-binary @"$FILE_PATH" \
-        "$upload_url?name=$FILE_NAME"
-      echo "$FILE_NAME uploaded successfully."
-    done
-
-    echo "All files uploaded successfully."
-}
-
-
-function buildAllUploadGithub() {
-  github_release
-}
 
 function showBuildDir() {
   # 检查是否输入路径参数
@@ -548,44 +297,34 @@ function showBuildDir() {
   done
 }
 # shellcheck disable=SC2120
-function buildDir() {
-  showBuildDir ./cmd
-  builddir="./release/${dir}"
-  appname=$(basename "$dir")
+function buildInstaller() {
+  showBuildDir ./cmd/app
+  builddir="./release"
+  #appname=$(basename "$dir")
+  appname="srvinstaller"
   appdir=${dir}
-  disname="${dir}应用程序"
-  describe="一款基于GO语言的${dir}程序"
+  disname="${appname}应用程序"
+  describe="一款基于GO语言的服务安装程序"
   rm -rf ${builddir}
   buildMenu $builddir $appname "$version" $appdir $disname $describe
 }
 
-function main() {
-  upgradeVersion
-  echo "1、编译Frps"
-  echo "2、编译Frpc"
-  echo "3、编译全部"
-  echo "4、编译目录"
-  read -p "请选择：" index
-  if [ $index == 1 ]; then
-    buildFrpsMenu
-  elif [ $index == 2 ]; then
-    buildFrpcMenu
-  elif [ $index == 3 ]; then
-    buildFrpcAndFrpsAll
-  elif [ $index == 4 ]; then
-    buildDir
-  fi
-  #提交代码
-#  if [ $index -le 3 ]; then
-#      gitCommit
-#  fi
-  #gitCommit
+# shellcheck disable=SC2120
+function buildForGithubRelease() {
+  builddir="./release"
+  appname="nasFileTool"
+  appdir="./cmd/file"
+  disname="${appname}应用程序"
+  describe="一款基于GO语言的服务安装程序"
+  echo "===>version:${version}"
+  go get github.com/josephspurrier/goversioninfo/cmd/goversioninfo
+  go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo
+  rm -rf ${builddir}
+  buildAll $builddir $appname "$version" $appdir $disname $describe
+  mkdir -p ./release/packages
+  mv -fv ./release/nasFileTool* ./release/packages
 }
 
-function buildWeb() {
-  chmod +x ./web/build.sh
-  ./web/build.sh
-}
 function bootstrap() {
   #printf "\033[1;31m%-10s\033[0m\n" "Error"  # 红色加粗文本
   if [ $# -ge 2 ] && [ -n "$2" ]; then
@@ -593,8 +332,8 @@ function bootstrap() {
   fi
   writeVersionGoFile
   case $1 in
-  all) (buildFrpcAndFrpsAllForGithubRelease) ;;
-    *) (main)  ;;
+  all) (buildForGithubRelease) ;;
+    *) (buildInstaller)  ;;
   esac
 }
 

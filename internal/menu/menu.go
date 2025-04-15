@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -44,7 +45,7 @@ func (s *singleton) ShowMenu() {
 		keys = append(keys, k)
 	}
 	keys = append(keys)
-	//sort.Strings(keys)
+	sort.Strings(keys)
 	fmt.Println("=== 主菜单 ===")
 	for i, key := range keys {
 		fmt.Printf("%d. %s\n", i+1, key)

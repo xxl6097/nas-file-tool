@@ -4,13 +4,13 @@ checksum:
   name_template: '{{ .ProjectName }}_sha256_checksums.txt'
   algorithm: sha256
   extra_files:
-  - glob: ./release/packages/*
+    - glob: ./release/packages/*
 release:
   # Same as for github
   # Note: it can only be one: either github, gitlab or gitea
   github:
     owner: xxl6097
-    name: go-frp-panel
+    name: nas-file-tool
 
   draft: false
 

@@ -10,20 +10,6 @@ import (
 	"strings"
 )
 
-func scanFiles(root string, re *regexp.Regexp) ([]string, error) {
-	var matches []string
-	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() && re.MatchString(info.Name()) {
-			matches = append(matches, path)
-		}
-		return nil
-	})
-	return matches, err
-}
-
 func filesMove() {
 	srcInput := input.InputString("源路径(文件名可用通配符)：")
 	dstInput := input.InputString("目标路径：")
@@ -107,16 +93,10 @@ func copyFilesWithAllChildren() {
 	}
 }
 
+// /Users/uuxia/Desktop/work/code/github/golang/nas-file-tool/test
 func filesRename() {
 	srcDir := input.InputString("源路径：")
-	str := input.InputString("匹配字符：")
-	matches, _ := filepath.Glob(filepath.Join(srcDir, str))
-
-	if !input.Confirm() {
-		return
-	}
-	for _, path := range matches {
-		fileName := filepath.Base(path)
-		fmt.Println(fileName)
-	}
+	words := input.InputString("通配符匹配：")
+	keywords := input.InputStringEmpty("替换字符：", "")
+	_ = utils.RenameFiles(srcDir, words, keywords)
 }
