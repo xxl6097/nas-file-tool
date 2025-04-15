@@ -298,10 +298,10 @@ function showBuildDir() {
 }
 # shellcheck disable=SC2120
 function buildInstaller() {
-  showBuildDir ./cmd/app
+  showBuildDir ./cmd/file
   builddir="./release"
   #appname=$(basename "$dir")
-  appname="srvinstaller"
+  appname="nas-file-tool"
   appdir=${dir}
   disname="${appname}应用程序"
   describe="一款基于GO语言的服务安装程序"
@@ -312,7 +312,7 @@ function buildInstaller() {
 # shellcheck disable=SC2120
 function buildForGithubRelease() {
   builddir="./release"
-  appname="nasFileTool"
+  appname="nas-file-tool"
   appdir="./cmd/file"
   disname="${appname}应用程序"
   describe="一款基于GO语言的服务安装程序"
