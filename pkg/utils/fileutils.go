@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-func IsVideoFile1(filePath string) bool {
+func IsVideoFile(filePath string) bool {
 	ext := filepath.Ext(filePath)
 	ext = strings.ToLower(ext)
 	switch ext {
@@ -21,7 +21,7 @@ func IsVideoFile1(filePath string) bool {
 	}
 }
 
-func IsVideoFile(filePath string) bool {
+func IsVideoFile1(filePath string) bool {
 	ext := filepath.Ext(filePath)
 	ext = strings.ToLower(ext)
 	switch ext {
