@@ -322,7 +322,7 @@ function buildForGithubRelease() {
   rm -rf ${builddir}
   buildAll $builddir $appname "$version" $appdir $disname $describe
   mkdir -p ./release/packages
-  mv -fv ./release/nasFileTool* ./release/packages
+  mv -fv ./release/${appname}* ./release/packages
 }
 
 function bootstrap() {
