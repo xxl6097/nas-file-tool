@@ -1,16 +1,19 @@
 package internal
 
 import (
+	"fmt"
 	"nas-file-tool/internal/menu"
 	"nas-file-tool/pkg/input"
 	"nas-file-tool/pkg/utils"
+	"os"
+	"path/filepath"
+	"strings"
 )
 
 func init() {
 	menu.GetInstance().AddMenuItem("移动", filesMove)
 	menu.GetInstance().AddMenuItem("复制", filesCopy)
 	menu.GetInstance().AddMenuItem("重命名", filesRename)
-	menu.GetInstance().AddMenuItem("去除空格", trimSpace)
 	menu.GetInstance().AddMenuItem("复制【含子目录】", copyFilesWithAllChildren)
 	menu.GetInstance().AddMenuItem("IPTV清单", forIPTV)
 }
@@ -56,6 +59,22 @@ func copyFilesWithAllChildren() {
 // /Users/uuxia/Desktop/work/code/github/golang/nas-file-tool/video/电影/其他电影
 func filesRename() {
 	srcDir := input.InputString("源路径：")
+	entries, err := os.ReadDir(srcDir)
+	if err != nil {
+		return
+	}
+	for _, entry := range entries {
+		isDir := entry.IsDir()
+		if !isDir {
+			fileName := strings.Replace(entry.Name(), " ", "", -1)
+			err = os.Rename(filepath.Join(srcDir, entry.Name()), filepath.Join(srcDir, fileName))
+			if err != nil {
+				fmt.Println(err)
+			}
+			fmt.Println("-", fileName)
+		}
+	}
+
 	for {
 		words := input.InputString("通配符匹配：")
 		keywords := input.InputStringEmpty("替换字符：", "")
