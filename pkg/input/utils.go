@@ -48,6 +48,21 @@ func InputString(title string) string {
 	}
 	return input
 }
+
+func Input(title string) string {
+	reader := bufio.NewReader(os.Stdin)
+	//glog.Print(title)
+	fmt.Print(title)
+	input, err := reader.ReadString('\n')
+	if err != nil {
+		return InputString(title)
+	}
+	if len(input) == 0 {
+		tips(title)
+		return InputString(title)
+	}
+	return input
+}
 func InputInt(title string) int {
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Print(title)

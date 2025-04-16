@@ -24,7 +24,8 @@ func Menu() {
 
 func forIPTV() {
 	rootDir := input.InputString("源目录路径:")
-	utils.FindMoves(rootDir)
+	urls := input.Input("请输入视频源规则:")
+	utils.FindMoves(rootDir, strings.Split(urls, " "))
 }
 
 func filesMove() {

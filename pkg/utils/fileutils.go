@@ -310,7 +310,7 @@ func Movefiles(pattern, srcDir, dstInput string) {
 	}
 }
 
-func FindMoves(rootDir string) {
+func FindMoves(rootDir string, urls []string) {
 	videos := make(map[string][]string, 0)
 	_ = filepath.WalkDir(rootDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
