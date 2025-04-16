@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log"
 	"nas-file-tool/pkg/input"
 	"os"
 	"path/filepath"
@@ -15,7 +16,7 @@ func IsVideoFile(filePath string) bool {
 	ext := filepath.Ext(filePath)
 	ext = strings.ToLower(ext)
 	switch ext {
-	case ".mp4", ".avi", ".mov", ".wmv", ".flv", ".mkv":
+	case ".mp4", ".avi", ".mov", ".wmv", ".flv", ".mkv", ".rmvb":
 		return true
 	default:
 		return false
@@ -333,15 +334,34 @@ func FindMoves(rootDir string, urls []string) {
 
 		return nil
 	})
+	///root/z4/18688947359/data/public/video
+	//http://uuxia.cn:8086/chfs/shared/video/%s?v=1$!-zzzzzzz http://192.168.1.2:8086/chfs/shared/video/%s?v=1$!-zzzzzzz
+	//http://192.168.1.2:8086/chfs/shared/video/%s?v=1$!-zzzzzzz
+	sb := strings.Builder{}
 	for key, v := range videos {
-		fmt.Println(fmt.Sprintf("🎬%s,#genre#", key))
+		sb.WriteString(fmt.Sprintf("🎬%s,#genre#\n", key))
+		//fmt.Println(fmt.Sprintf("🎬%s,#genre#", key))
 		for _, file := range v {
-			//fmt.Sprintf("决战中途岛.2019.BD1080p.国英双语.中英双字.mp4,http://uuxia.cn:8086/chfs/shared/video/电影/战争电影/决战中途岛.2019.BD1080p.国英双语.中英双字.mp4?v=1$!-zzzzzzz")
 			filename := filepath.Base(file)
 			filename = strings.TrimSuffix(filename, filepath.Ext(filename))
-			str := fmt.Sprintf("%s,%s/chfs/shared/video/%s?v=1$!-zzzzzzz", filename, "http://uuxia.cn:8086", file)
-			//fmt.Println(file)
-			fmt.Println(str)
+			for i := 0; i < len(urls); i++ {
+				u := fmt.Sprintf(urls[i], file)
+				str := fmt.Sprintf("%s,%s", filename, u)
+				if i == len(urls)-1 {
+					sb.WriteString(str)
+				} else {
+					sb.WriteString(fmt.Sprintf("%s\n", str))
+				}
+
+			}
 		}
+
+		sb.WriteString("\n")
+	}
+
+	content := []byte(sb.String())
+	err := os.WriteFile("./output.txt", content, 0644)
+	if err != nil {
+		log.Fatal(err)
 	}
 }
