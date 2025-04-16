@@ -68,11 +68,11 @@ func InputInt(title string) int {
 }
 
 func Confirm(title string) bool {
-	no := InputString(fmt.Sprintf("%s，%s", title, "确定/取消?(y/n):"))
+	no := InputStringEmpty(fmt.Sprintf("%s，%s", title, "确定/取消?(y/n):"), "")
 	switch no {
-	case "y", "Y", "Yes", "YES":
-		return true
-	default:
+	case "n", "N", "No", "NO":
 		return false
+	default:
+		return true
 	}
 }

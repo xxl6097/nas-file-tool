@@ -296,15 +296,15 @@ function showBuildDir() {
       fi
   done
 }
+
 # shellcheck disable=SC2120
-function buildInstaller() {
-  showBuildDir ./cmd/file
-  builddir="./release"
-  #appname=$(basename "$dir")
-  appname="nas-file-tool"
+function buildDir() {
+  showBuildDir ./cmd
+  builddir="./release/${dir}"
+  appname=$(basename "$dir")
   appdir=${dir}
-  disname="${appname}应用程序"
-  describe="一款基于GO语言的服务安装程序"
+  disname="${dir}应用程序"
+  describe="一款基于GO语言的${dir}程序"
   rm -rf ${builddir}
   buildMenu $builddir $appname "$version" $appdir $disname $describe
 }
@@ -333,7 +333,7 @@ function bootstrap() {
   writeVersionGoFile
   case $1 in
   all) (buildForGithubRelease) ;;
-    *) (buildInstaller)  ;;
+    *) (buildDir)  ;;
   esac
 }
 

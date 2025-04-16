@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"nas-file-tool/pkg/input"
 	"os"
 	"path/filepath"
@@ -135,10 +136,19 @@ func scanDir(dir string) error {
 	return nil
 }
 
+// 通配符转正则表达式
+func wildcardToRegex(pattern string) string {
+	pattern = regexp.QuoteMeta(pattern)               // 转义特殊字符
+	pattern = strings.ReplaceAll(pattern, `\*`, `.*`) // 替换 * 为 .*
+	pattern = strings.ReplaceAll(pattern, `\?`, `.`)  // 替换 ? 为 .
+	return "^" + pattern + "$"                        // 限定整个字符串匹配
+}
+
 // WildcardReplace 函数将包含通配符的模式字符串转换为正则表达式模式，并替换通配符匹配部分
 func WildcardReplace(pattern, replacement, input string) string {
 	// 将通配符 * 转换为正则表达式的 (.*)，使用捕获组来匹配通配符部分
 	regexPattern := strings.ReplaceAll(pattern, "*", "(.*)")
+	regexPattern = wildcardToRegex(regexPattern)
 	re, err := regexp.Compile(regexPattern)
 	if err != nil {
 		fmt.Println("正则表达式编译错误:", err)
@@ -148,14 +158,25 @@ func WildcardReplace(pattern, replacement, input string) string {
 	return re.ReplaceAllString(input, strings.ReplaceAll(pattern, "*", replacement))
 }
 
+func isWildcardMatch(str, pattern string) bool {
+	regexPattern := wildcardToRegex(pattern)
+	re := regexp.MustCompile(regexPattern)
+	return re.MatchString(str)
+}
+
 func RenameFiles(dir, pattern, target string) error {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return err
 	}
 	for _, entry := range entries {
-		if !entry.IsDir() {
+		isMatch := isWildcardMatch(entry.Name(), pattern)
+		isMatch = isMatch || strings.Contains(entry.Name(), pattern)
+		isDir := entry.IsDir()
+		//fmt.Println(isMatch, entry.Name(), pattern)
+		if !isDir && isMatch {
 			fileName := strings.ReplaceAll(entry.Name(), pattern, target)
+			fileName = strings.ReplaceAll(fileName, " ", "")
 			fileName = WildcardReplace(pattern, target, fileName)
 			fmt.Println("-", fileName)
 		}
@@ -175,4 +196,152 @@ func RenameFiles(dir, pattern, target string) error {
 		}
 	}
 	return nil
+}
+
+func TrimSpace(dir string) error {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		isMatch := strings.Contains(entry.Name(), " ")
+		isDir := entry.IsDir()
+		if !isDir && isMatch {
+			fileName := strings.Replace(entry.Name(), " ", "", -1)
+			fmt.Println("-", fileName)
+		}
+	}
+	if !input.Confirm("确定重命名吗") {
+		return nil
+	}
+	for _, entry := range entries {
+		isMatch := strings.Contains(entry.Name(), " ")
+		isDir := entry.IsDir()
+		if !isDir && isMatch {
+			fileName := strings.Replace(entry.Name(), " ", "", -1)
+			err = os.Rename(filepath.Join(dir, entry.Name()), filepath.Join(dir, fileName))
+			if err != nil {
+				fmt.Println(err)
+			}
+		}
+	}
+	return nil
+}
+
+func CopyChildrenFiles(pattern, srcDir, dstInput string) {
+	// 将通配符转换为正则表达式（支持 * 和 ​**​）
+	regexPattern := strings.ReplaceAll(pattern, ".", `\.`)
+	regexPattern = strings.ReplaceAll(regexPattern, "*", ".*")
+	re := regexp.MustCompile("^" + regexPattern + "$")
+
+	var matches []string
+	filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return nil
+		}
+		// 提取相对路径用于匹配（如 data/logs/error.log）
+		relPath, _ := filepath.Rel(srcDir, path)
+		if re.MatchString(relPath) {
+			matches = append(matches, path)
+			fmt.Println("-", relPath)
+		}
+		return nil
+	})
+	fmt.Println("匹配文件数量:", len(matches))
+	if !input.Confirm("确定复制吗") {
+		return
+	}
+	for _, f := range matches {
+		//fmt.Println("-", f)
+		go func(srcPath, dstInput string) {
+			err := CopyFileToDir(srcPath, dstInput)
+			if err != nil {
+				fmt.Println("复制失败", srcPath, err)
+			}
+		}(f, dstInput)
+	}
+}
+
+func CopyFiles(pattern, srcDir, dstInput string) {
+	matches, _ := filepath.Glob(filepath.Join(srcDir, pattern))
+	for _, path := range matches {
+		fileName := filepath.Base(path)
+		srcPath := filepath.Join(srcDir, fileName)
+		fmt.Println("-", srcPath)
+	}
+
+	if !input.Confirm("确定复制吗") {
+		return
+	}
+	for _, path := range matches {
+		fileName := filepath.Base(path)
+		srcPath := filepath.Join(srcDir, fileName)
+		go func(srcPath, dstInput string) {
+			err := CopyFileToDir(srcPath, dstInput)
+			if err != nil {
+				fmt.Println("复制失败", srcPath, err)
+			}
+		}(srcPath, dstInput)
+	}
+}
+
+func Movefiles(pattern, srcDir, dstInput string) {
+	matches, _ := filepath.Glob(filepath.Join(srcDir, pattern))
+
+	for _, path := range matches {
+		fileName := filepath.Base(path)
+		srcPath := filepath.Join(srcDir, fileName)
+		fmt.Println("-", srcPath)
+	}
+
+	if !input.Confirm("确定移动吗") {
+		return
+	}
+
+	for _, path := range matches {
+		fileName := filepath.Base(path)
+		srcPath := filepath.Join(srcDir, fileName)
+		go func(srcPath, dstInput string) {
+			err := MoveFileToDir(srcPath, dstInput)
+			if err != nil {
+				fmt.Println("移动失败", srcPath, err)
+			}
+		}(srcPath, dstInput)
+	}
+}
+
+func FindMoves(rootDir string) {
+	videos := make(map[string][]string, 0)
+	_ = filepath.WalkDir(rootDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			//fmt.Println("-", d.Name())
+			return nil
+		}
+		// 提取相对路径用于匹配（如 data/logs/error.log）
+		relPath, _ := filepath.Rel(rootDir, path)
+		if IsVideoFile(relPath) {
+			parentDir := filepath.Dir(filepath.Clean(relPath))
+			dir := filepath.Base(parentDir)
+			video := videos[dir]
+			if video == nil {
+				video = make([]string, 0)
+			}
+			video = append(video, relPath)
+			//fmt.Println(" -", relPath)
+			videos[dir] = video
+		}
+
+		return nil
+	})
+	for key, v := range videos {
+		fmt.Println(fmt.Sprintf("🎬%s,#genre#", key))
+		for _, file := range v {
+			//fmt.Sprintf("决战中途岛.2019.BD1080p.国英双语.中英双字.mp4,http://uuxia.cn:8086/chfs/shared/video/电影/战争电影/决战中途岛.2019.BD1080p.国英双语.中英双字.mp4?v=1$!-zzzzzzz")
+			filename := filepath.Base(file)
+			filename = strings.TrimSuffix(filename, filepath.Ext(filename))
+			str := fmt.Sprintf("%s,%s/chfs/shared/video/%s?v=1$!-zzzzzzz", filename, "http://uuxia.cn:8086", file)
+			//fmt.Println(file)
+			fmt.Println(str)
+		}
+	}
 }
