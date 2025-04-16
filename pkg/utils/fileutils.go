@@ -364,4 +364,5 @@ func FindMoves(rootDir string, urls []string) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Println(sb.String())
 }
